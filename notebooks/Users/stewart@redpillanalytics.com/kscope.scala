@@ -50,14 +50,14 @@ customer.write.format("delta").mode("overwrite").save("/delta/customer/")
 // COMMAND ----------
 
 // MAGIC %md
-// MAGIC Let's create a Delta Lake table to hold this. A Delta lake table has all the 
+// MAGIC Let's now create a structured delta lake table to hold our intermediate customer table:
 
 // COMMAND ----------
 
 // MAGIC %sql
 // MAGIC DROP TABLE IF EXISTS customer;
 // MAGIC 
-// MAGIC CREATE TABLE IF NOT EXISTS customer
+// MAGIC CREATE TABLE customer
 // MAGIC USING DELTA
 // MAGIC LOCATION '/delta/customer';
 
@@ -77,8 +77,49 @@ customer.write.format("delta").mode("overwrite").save("/delta/customer/")
 // COMMAND ----------
 
 // MAGIC %sql
-// MAGIC CREATE table customer_ranked AS
+// MAGIC DROP table if exists customer_transformed;
+// MAGIC 
+// MAGIC CREATE table customer_transformed 
+// MAGIC using delta
+// MAGIC location '/delta/customer_transformed'
+// MAGIC AS
 // MAGIC SELECT *,
-// MAGIC        rank() over (partition by customer_id order by action_ts) customer_rank 
-// MAGIC from customer
-// MAGIC where customer_rank = 1;
+// MAGIC        rank() over (partition by customer_id order by action_ts) CUSTOMER_RANK,
+// MAGIC        CASE ACCOUNT_TAX_STATUS
+// MAGIC           WHEN 2 then 'Charity'
+// MAGIC           WHEN 0 then 'Exempt'
+// MAGIC           ELSE 'Non-exempt'
+// MAGIC           END TAX_STATUS
+// MAGIC from customer;
+// MAGIC 
+// MAGIC DELETE FROM customer_transformed where customer_rank <> 1;
+
+// COMMAND ----------
+
+// MAGIC %md
+// MAGIC Let's visualize results again:
+
+// COMMAND ----------
+
+// MAGIC %sql
+// MAGIC SELECT * from customer_transformed;
+
+// COMMAND ----------
+
+// MAGIC %md
+// MAGIC Let's use Scala again to demonstrate it's interoperability. Let's drop a few unneeded columns:
+
+// COMMAND ----------
+
+val customer_stage = spark.read.format("delta").load("/delta/customer_transformed")
+
+customer_stage
+.drop("ACCOUNT_TAX_STATUS")
+.drop("_FIVETRAN_ID")
+.drop("_FIVETRAN_DELETED")
+.drop("_FIVETRAN_SYNCED")
+.write.format("snowflake")
+.options(target)
+.option("dbtable", "D_CUSTOMER")
+.mode("append")
+.save()
