@@ -1,6 +1,6 @@
 // Databricks notebook source
 // MAGIC %md
-// MAGIC We're storing our Snowflake username and password as *secrets* in a Databricks *scope* that I called **kscope**. Notice when I execute, Databricks redacts these variables for security sake:
+// MAGIC #### We're storing our Snowflake username and password as *secrets* in a Databricks *scope* that I called "kscope". Notice when I execute, Databricks redacts these variables for security sake:
 
 // COMMAND ----------
 
@@ -10,7 +10,7 @@ val password = dbutils.secrets.get("kscope", "snowflake_password")
 // COMMAND ----------
 
 // MAGIC %md
-// MAGIC Let's configure our Snowflake connections. We're using the same Snowflake database for our SOURCE and TARGET, but different schemas. We are also using the Databricks app **secret** 
+// MAGIC #### Let's configure our Snowflake connections. We're using the same Snowflake database for our SOURCE and TARGET, but different schemas. Notice again our secrets are redacted:
 
 // COMMAND ----------
 
@@ -33,7 +33,7 @@ val target = Map( "sfUrl" -> "redpill.snowflakecomputing.com",
 // COMMAND ----------
 
 // MAGIC %md
-// MAGIC Let's create a few dataframes of tables to work with
+// MAGIC #### We are replicated tables to Snowflake using **Fivetran**, a cloud-based replication service. So I'll pull my source table **CUSTOMER** from Snowflake into Databricks Delta Lake:
 
 // COMMAND ----------
 
@@ -50,7 +50,7 @@ customer.write.format("delta").mode("overwrite").save("/delta/customer/")
 // COMMAND ----------
 
 // MAGIC %md
-// MAGIC Let's now create a structured delta lake table to hold our intermediate customer table:
+// MAGIC #### Once we've loaded our files into Delta Lake, we can use Spark SQL. We'll create a structured delta lake table to hold our intermediate customer table:
 
 // COMMAND ----------
 
@@ -64,7 +64,7 @@ customer.write.format("delta").mode("overwrite").save("/delta/customer/")
 // COMMAND ----------
 
 // MAGIC %md
-// MAGIC Let's visualize the results:
+// MAGIC #### Let's visualize the results. Notice that our customer source data has numerous checkpoint records that we don't much care about. So let's just get the first one:
 
 // COMMAND ----------
 
@@ -88,15 +88,15 @@ customer.write.format("delta").mode("overwrite").save("/delta/customer/")
 // MAGIC           WHEN 2 then 'Charity'
 // MAGIC           WHEN 0 then 'Exempt'
 // MAGIC           ELSE 'Non-exempt'
-// MAGIC           END TAX_STATUS
-// MAGIC from customer;
+// MAGIC        END TAX_STATUS
+// MAGIC FROM customer;
 // MAGIC 
 // MAGIC DELETE FROM customer_stage where customer_rank <> 1;
 
 // COMMAND ----------
 
 // MAGIC %md
-// MAGIC Let's visualize results again:
+// MAGIC #### Let's visualize results again:
 
 // COMMAND ----------
 
@@ -106,7 +106,7 @@ customer.write.format("delta").mode("overwrite").save("/delta/customer/")
 // COMMAND ----------
 
 // MAGIC %md
-// MAGIC Let's use Scala again to demonstrate it's interoperability. Let's drop a few unneeded columns:
+// MAGIC #### Let's use Scala again to demonstrate it's interoperability. Let's remove unnecessary columns and then load the results to Snowflake:
 
 // COMMAND ----------
 
