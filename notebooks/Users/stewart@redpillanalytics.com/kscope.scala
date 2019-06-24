@@ -10,7 +10,7 @@ val password = dbutils.secrets.get("kscope", "snowflake_password")
 // COMMAND ----------
 
 // MAGIC %md
-// MAGIC Let's configure our Snowflake connections. We're using the same Snowflake database for our SOURCE and TARGET, but different schemas.
+// MAGIC Let's configure our Snowflake connections. We're using the same Snowflake database for our SOURCE and TARGET, but different schemas. We are also using the Databricks app **secret** 
 
 // COMMAND ----------
 
@@ -39,17 +39,46 @@ val target = Map( "sfUrl" -> "redpill.snowflakecomputing.com",
 
 import org.apache.spark.sql.DataFrame
 
-val trade: DataFrame = spark.read
+val customer: DataFrame = spark.read
   .format("snowflake")
   .options(source)
-  .option("dbtable", "trade")
+  .option("dbtable", "customer")
   .load()
+
+customer.write.format("delta").mode("overwrite").save("/delta/customer/")
 
 // COMMAND ----------
 
 // MAGIC %md
-// MAGIC Let's visualize the results.
+// MAGIC Let's create a Delta Lake table to hold this. A Delta lake table has all the 
 
 // COMMAND ----------
 
-display(trade)
+// MAGIC %sql
+// MAGIC DROP TABLE IF EXISTS customer;
+// MAGIC 
+// MAGIC CREATE TABLE IF NOT EXISTS customer
+// MAGIC USING DELTA
+// MAGIC LOCATION '/delta/customer';
+
+// COMMAND ----------
+
+// MAGIC %md
+// MAGIC Let's visualize the results:
+
+// COMMAND ----------
+
+// MAGIC %sql
+// MAGIC SELECT *,
+// MAGIC        rank() over (partition by customer_id order by action_ts) customer_rank 
+// MAGIC from customer
+// MAGIC order by customer_id, customer_rank;
+
+// COMMAND ----------
+
+// MAGIC %sql
+// MAGIC CREATE table customer_ranked AS
+// MAGIC SELECT *,
+// MAGIC        rank() over (partition by customer_id order by action_ts) customer_rank 
+// MAGIC from customer
+// MAGIC where customer_rank = 1;
