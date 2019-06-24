@@ -1,6 +1,6 @@
 // Databricks notebook source
 // MAGIC %md
-// MAGIC We'll start by grabbing credentials for access to Snowflake Data Warehouse
+// MAGIC We're storing our Snowflake username and password as *secrets* in a Databricks *scope* that I called **kscope**. Notice when I execute, Databricks redacts these variables for security sake:
 
 // COMMAND ----------
 
@@ -70,18 +70,17 @@ customer.write.format("delta").mode("overwrite").save("/delta/customer/")
 
 // MAGIC %sql
 // MAGIC SELECT *,
-// MAGIC        rank() over (partition by customer_id order by action_ts) customer_rank 
+// MAGIC        rank() over (partition by customer_id order by action_ts) customer_rank
 // MAGIC from customer
 // MAGIC order by customer_id, customer_rank;
 
 // COMMAND ----------
 
 // MAGIC %sql
-// MAGIC DROP table if exists customer_transformed;
+// MAGIC DROP table if exists customer_stage;
 // MAGIC 
-// MAGIC CREATE table customer_transformed 
+// MAGIC CREATE table customer_stage 
 // MAGIC using delta
-// MAGIC location '/delta/customer_transformed'
 // MAGIC AS
 // MAGIC SELECT *,
 // MAGIC        rank() over (partition by customer_id order by action_ts) CUSTOMER_RANK,
@@ -92,7 +91,7 @@ customer.write.format("delta").mode("overwrite").save("/delta/customer/")
 // MAGIC           END TAX_STATUS
 // MAGIC from customer;
 // MAGIC 
-// MAGIC DELETE FROM customer_transformed where customer_rank <> 1;
+// MAGIC DELETE FROM customer_stage where customer_rank <> 1;
 
 // COMMAND ----------
 
@@ -102,7 +101,7 @@ customer.write.format("delta").mode("overwrite").save("/delta/customer/")
 // COMMAND ----------
 
 // MAGIC %sql
-// MAGIC SELECT * from customer_transformed;
+// MAGIC SELECT * from customer_stage;
 
 // COMMAND ----------
 
@@ -111,9 +110,9 @@ customer.write.format("delta").mode("overwrite").save("/delta/customer/")
 
 // COMMAND ----------
 
-val customer_stage = spark.read.format("delta").load("/delta/customer_transformed")
+val d_customer = spark.table("customer_stage")
 
-customer_stage
+d_customer
 .drop("ACCOUNT_TAX_STATUS")
 .drop("_FIVETRAN_ID")
 .drop("_FIVETRAN_DELETED")
