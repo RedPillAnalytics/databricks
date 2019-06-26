@@ -69,9 +69,11 @@ customer.write.format("delta").mode("overwrite").save("/delta/customer/")
 // COMMAND ----------
 
 // MAGIC %sql
-// MAGIC SELECT *,
-// MAGIC        rank() over (partition by customer_id order by action_ts) customer_rank
+// MAGIC SELECT customer_id,
+// MAGIC        rank() over (partition by customer_id order by action_ts) customer_rank,
+// MAGIC        count(*) customer_count
 // MAGIC from customer
+// MAGIC group by customer_id, action_ts
 // MAGIC order by customer_id, customer_rank;
 
 // COMMAND ----------
@@ -101,7 +103,9 @@ customer.write.format("delta").mode("overwrite").save("/delta/customer/")
 // COMMAND ----------
 
 // MAGIC %sql
-// MAGIC SELECT * from customer_stage;
+// MAGIC SELECT tax_status, customer_rank, count(*) customer_cnt
+// MAGIC from customer_stage
+// MAGIC group by tax_status, customer_rank;
 
 // COMMAND ----------
 
